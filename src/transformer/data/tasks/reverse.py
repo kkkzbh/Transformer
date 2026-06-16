@@ -59,14 +59,15 @@ class ReverseTask:
     config: TaskConfig                          # 任务与数据配置。
     name: str = field(init=False, default="reverse")  # 任务注册名。
     vocab: Vocab = field(init=False)            # 任务词表。
+    split: SplitSizes = field(init=False)       # 数据集划分大小。
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "vocab", Vocab.digits(self.config.digit_count))
+        object.__setattr__(self, "split", self._compute_split_sizes())
 
     def make_train_dataset(self) -> Dataset[Seq2SeqSample]:
-        split = self.split_sizes()
         return ReverseDataset(
-            size=split.train,
+            size=self.split.train,
             start_index=0,
             min_len=self.config.min_len,
             max_len=self.config.max_len,
@@ -77,10 +78,9 @@ class ReverseTask:
         )
 
     def make_eval_dataset(self) -> Dataset[Seq2SeqSample]:
-        split = self.split_sizes()
         return ReverseDataset(
-            size=split.val,
-            start_index=split.train,
+            size=self.split.val,
+            start_index=self.split.train,
             min_len=self.config.min_len,
             max_len=self.config.max_len,
             seed=self.config.seed,
@@ -90,10 +90,9 @@ class ReverseTask:
         )
 
     def make_test_dataset(self) -> Dataset[Seq2SeqSample]:
-        split = self.split_sizes()
         return ReverseDataset(
-            size=split.test,
-            start_index=split.train + split.val,
+            size=self.split.test,
+            start_index=self.split.train + self.split.val,
             min_len=self.config.min_len,
             max_len=self.config.max_len,
             seed=self.config.seed,
@@ -103,6 +102,9 @@ class ReverseTask:
         )
 
     def split_sizes(self) -> SplitSizes:
+        return self.split
+
+    def _compute_split_sizes(self) -> SplitSizes:
         ratios = (self.config.train_ratio, self.config.val_ratio, self.config.test_ratio)
         if any(ratio <= 0 for ratio in ratios):
             raise ValueError("train_ratio, val_ratio, and test_ratio must all be positive.")
@@ -140,7 +142,7 @@ class ReverseTask:
 
     def _write_samples(self, path: Path) -> None:
         dataset = self.make_eval_dataset()
-        sample_count = min(self.config.samples_to_export, self.split_sizes().val)
+        sample_count = min(self.config.samples_to_export, self.split.val)
         with path.open("w", encoding="utf-8") as handle:
             for index in range(sample_count):
                 sample = dataset[index]

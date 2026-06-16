@@ -70,17 +70,15 @@ def test_split_sizes_and_offsets_are_deterministic() -> None:
 
 
 def test_split_ratios_must_sum_to_one() -> None:
-    task = ReverseTask(
-        TaskConfig(
-            dataset_size=100,
-            train_ratio=0.8,
-            val_ratio=0.1,
-            test_ratio=0.2,
-        )
-    )
-
     with pytest.raises(ValueError, match="must equal 1.0"):
-        task.split_sizes()
+        ReverseTask(
+            TaskConfig(
+                dataset_size=100,
+                train_ratio=0.8,
+                val_ratio=0.1,
+                test_ratio=0.2,
+            )
+        )
 
 
 def _tokens(task: ReverseTask, ids: list[int]) -> list[str]:
