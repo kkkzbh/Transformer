@@ -22,6 +22,15 @@ def test_digit_vocab_encode_decode() -> None:
     assert vocab.decode(ids) == ["3", "7", "1"]
 
 
+def test_decode_stop_at_eos_truncates_following_tokens() -> None:
+    vocab = Vocab.digits(10)
+
+    ids = vocab.encode(["3", EOS_TOKEN, "7"])
+
+    assert vocab.decode(ids, stop_at_eos=True) == ["3"]
+    assert vocab.decode(ids, stop_at_eos=False) == ["3", "7"]
+
+
 def test_unknown_token_encodes_to_unk() -> None:
     vocab = Vocab.digits(10)
 

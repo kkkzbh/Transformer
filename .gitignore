@@ -20,3 +20,4 @@ runs/
 # Local documents and OS/editor files
 *.pdf
 .DS_Store
+.idea/

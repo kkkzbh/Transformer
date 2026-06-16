@@ -52,6 +52,34 @@ class GreedyMetrics:
     avg_prediction_length_by_source_length: dict[int, float]
 
 
+@dataclass(frozen=True, slots=True)
+class GenerationRecord:
+    output_ids: list[int]
+    target_length: int
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationSampleDiagnostics:
+    generated_ids: list[int]
+    eos_index: int | None
+    has_eos: bool
+    eos_at_expected_position: bool
+    truncated_by_max_len: bool
+    unk_count: int
+    has_unk: bool
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationDiagnostics:
+    eos_rate: float
+    missing_eos_rate: float
+    eos_at_expected_position_rate: float
+    avg_generated_length: float
+    max_len_truncation_rate: float
+    unk_token_rate: float
+    samples_with_unk_rate: float
+
+
 def evaluate_checkpoint(
     checkpoint_path: str | Path,
     *,
@@ -86,7 +114,7 @@ def evaluate_checkpoint(
         device=device,
         pad_id=task.vocab.pad_id,
     )
-    greedy_metrics, prediction_rows = _evaluate_greedy(
+    greedy_metrics, generation_diagnostics, prediction_rows = _evaluate_greedy(
         model,
         dataset,
         task=task,
@@ -119,6 +147,7 @@ def evaluate_checkpoint(
         },
         "teacher_forced": asdict(teacher_metrics),
         "greedy": asdict(greedy_metrics),
+        "generation_diagnostics": asdict(generation_diagnostics),
         "artifacts": {
             "evaluation_json": str(report_path),
             "predictions": str(predictions_path),
@@ -186,7 +215,7 @@ def _evaluate_greedy(
     device: torch.device,
     max_samples: int,
     max_len: int,
-) -> tuple[GreedyMetrics, list[dict[str, object]]]:
+) -> tuple[GreedyMetrics, GenerationDiagnostics, list[dict[str, object]]]:
     if max_samples <= 0:
         raise ValueError("max_samples must be positive.")
 
@@ -201,6 +230,7 @@ def _evaluate_greedy(
     length_exact: dict[int, int] = defaultdict(int)
     target_length_sums: dict[int, int] = defaultdict(int)
     prediction_length_sums: dict[int, int] = defaultdict(int)
+    generation_records: list[GenerationRecord] = []
     rows: list[dict[str, object]] = []
 
     if sample_count == 0:
@@ -227,6 +257,9 @@ def _evaluate_greedy(
         target_length = len(target_tokens)
         prediction_length = len(predicted_tokens)
         length_error = prediction_length - target_length
+        generation_records.append(
+            GenerationRecord(output_ids=output_ids, target_length=target_length)
+        )
 
         exact_matches += int(exact)
         length_matches += int(prediction_length == target_length)
@@ -272,6 +305,16 @@ def _evaluate_greedy(
         length: prediction_length_sums[length] / total
         for length, total in sorted(length_totals.items())
     }
+    generation_diagnostics, sample_diagnostics = compute_generation_diagnostics(
+        generation_records,
+        eos_id=task.vocab.eos_id,
+        unk_id=task.vocab.unk_id,
+        max_len=max_len,
+    )
+    rows = [
+        row | asdict(sample_diagnostic)
+        for row, sample_diagnostic in zip(rows, sample_diagnostics, strict=True)
+    ]
     return (
         GreedyMetrics(
             exact_match=exact_matches / sample_count,
@@ -285,7 +328,68 @@ def _evaluate_greedy(
             avg_target_length_by_source_length=avg_target_length_by_source_length,
             avg_prediction_length_by_source_length=avg_prediction_length_by_source_length,
         ),
+        generation_diagnostics,
         rows,
+    )
+
+
+def compute_generation_diagnostics(
+    records: Iterable[GenerationRecord],
+    *,
+    eos_id: int,
+    unk_id: int,
+    max_len: int,
+) -> tuple[GenerationDiagnostics, list[GenerationSampleDiagnostics]]:
+    record_list = list(records)
+    if not record_list:
+        raise ValueError("generation diagnostics require at least one record.")
+
+    eos_count = 0
+    eos_at_expected_position_count = 0
+    truncation_count = 0
+    total_generated_tokens = 0
+    total_unk_tokens = 0
+    samples_with_unk = 0
+    sample_diagnostics: list[GenerationSampleDiagnostics] = []
+
+    for record in record_list:
+        eos_index = _first_index(record.output_ids, eos_id)
+        has_eos = eos_index is not None
+        eos_at_expected_position = eos_index == record.target_length
+        truncated_by_max_len = not has_eos and len(record.output_ids) >= max_len
+        unk_count = record.output_ids.count(unk_id)
+        has_unk = unk_count > 0
+
+        eos_count += int(has_eos)
+        eos_at_expected_position_count += int(eos_at_expected_position)
+        truncation_count += int(truncated_by_max_len)
+        total_generated_tokens += len(record.output_ids)
+        total_unk_tokens += unk_count
+        samples_with_unk += int(has_unk)
+        sample_diagnostics.append(
+            GenerationSampleDiagnostics(
+                generated_ids=record.output_ids,
+                eos_index=eos_index,
+                has_eos=has_eos,
+                eos_at_expected_position=eos_at_expected_position,
+                truncated_by_max_len=truncated_by_max_len,
+                unk_count=unk_count,
+                has_unk=has_unk,
+            )
+        )
+
+    sample_count = len(record_list)
+    return (
+        GenerationDiagnostics(
+            eos_rate=eos_count / sample_count,
+            missing_eos_rate=(sample_count - eos_count) / sample_count,
+            eos_at_expected_position_rate=eos_at_expected_position_count / sample_count,
+            avg_generated_length=total_generated_tokens / sample_count,
+            max_len_truncation_rate=truncation_count / sample_count,
+            unk_token_rate=_safe_rate(total_unk_tokens, total_generated_tokens),
+            samples_with_unk_rate=samples_with_unk / sample_count,
+        ),
+        sample_diagnostics,
     )
 
 
@@ -293,9 +397,27 @@ def format_evaluation_report(report_dir: str | Path) -> str:
     report = load_evaluation_report(report_dir)
     teacher = _require_mapping(report, "teacher_forced")
     greedy = _require_mapping(report, "greedy")
+    generation_diagnostics = _require_mapping(report, "generation_diagnostics")
     runtime = _require_mapping(report, "runtime")
     artifacts = _require_mapping(report, "artifacts")
     figures = _require_mapping(artifacts, "figures")
+    eos_rate = _format_percent(_require_float(generation_diagnostics, "eos_rate"))
+    missing_eos_rate = _format_percent(
+        _require_float(generation_diagnostics, "missing_eos_rate")
+    )
+    expected_eos_rate = _format_percent(
+        _require_float(generation_diagnostics, "eos_at_expected_position_rate")
+    )
+    truncation_rate = _format_percent(
+        _require_float(generation_diagnostics, "max_len_truncation_rate")
+    )
+    unk_token_rate = _format_percent(_require_float(generation_diagnostics, "unk_token_rate"))
+    samples_with_unk_rate = _format_percent(
+        _require_float(generation_diagnostics, "samples_with_unk_rate")
+    )
+    avg_generated_length = _format_float(
+        _require_float(generation_diagnostics, "avg_generated_length")
+    )
 
     lines = [
         "Evaluation",
@@ -323,6 +445,15 @@ def format_evaluation_report(report_dir: str | Path) -> str:
         f"avg_decode_seconds: {_format_float(_require_float(greedy, 'avg_decode_seconds'))}",
         f"length_match_rate: {_format_percent(_require_float(greedy, 'length_match_rate'))}",
         f"avg_length_error: {_format_float(_require_float(greedy, 'avg_length_error'))}",
+        "",
+        "Generation diagnostics",
+        f"eos_rate: {eos_rate}",
+        f"missing_eos_rate: {missing_eos_rate}",
+        f"eos_at_expected_position_rate: {expected_eos_rate}",
+        f"max_len_truncation_rate: {truncation_rate}",
+        f"unk_token_rate: {unk_token_rate}",
+        f"samples_with_unk_rate: {samples_with_unk_rate}",
+        f"avg_generated_length: {avg_generated_length}",
         "",
         "Exact match by source length",
     ]
@@ -374,6 +505,19 @@ def _write_jsonl(path: Path, rows: Iterable[Mapping[str, object]]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=True) + "\n")
+
+
+def _first_index(values: Iterable[int], needle: int) -> int | None:
+    for index, value in enumerate(values):
+        if value == needle:
+            return index
+    return None
+
+
+def _safe_rate(numerator: int, denominator: int) -> float:
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
 
 
 def _require_mapping(mapping: Mapping[str, object], key: str) -> Mapping[str, object]:
