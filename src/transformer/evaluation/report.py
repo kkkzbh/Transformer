@@ -31,53 +31,53 @@ DatasetSplit = Literal["train", "val", "test"]
 
 @dataclass(frozen=True, slots=True)
 class TeacherForcedMetrics:
-    loss: float
-    perplexity: float
-    token_accuracy: float
-    examples: int
-    tokens: int
+    loss: float            # 平均 teacher-forcing 损失。
+    perplexity: float      # 损失的指数形式。
+    token_accuracy: float  # 非 pad 目标 token 准确率。
+    examples: int          # 评估样本数。
+    tokens: int            # 评估目标 token 数。
 
 
 @dataclass(frozen=True, slots=True)
 class GreedyMetrics:
-    exact_match: float
-    token_accuracy: float
-    examples: int
-    tokens: int
-    avg_decode_seconds: float
-    length_match_rate: float
-    avg_length_error: float
-    by_length: dict[int, float]
-    avg_target_length_by_source_length: dict[int, float]
-    avg_prediction_length_by_source_length: dict[int, float]
+    exact_match: float                                   # 整序列匹配率。
+    token_accuracy: float                                # 目标位置 token 准确率。
+    examples: int                                        # 贪心生成样本数。
+    tokens: int                                          # 目标 token 数。
+    avg_decode_seconds: float                            # 平均解码耗时。
+    length_match_rate: float                             # 生成长度匹配率。
+    avg_length_error: float                              # 平均绝对长度误差。
+    by_length: dict[int, float]                          # 按源长度统计匹配率。
+    avg_target_length_by_source_length: dict[int, float]  # 按源长度统计目标长度。
+    avg_prediction_length_by_source_length: dict[int, float]  # 按源长度统计生成长度。
 
 
 @dataclass(frozen=True, slots=True)
 class GenerationRecord:
-    output_ids: list[int]
-    target_length: int
+    output_ids: list[int]  # 原始 greedy 输出，不含 BOS。
+    target_length: int     # 期望的非 EOS 目标长度。
 
 
 @dataclass(frozen=True, slots=True)
 class GenerationSampleDiagnostics:
-    generated_ids: list[int]
-    eos_index: int | None
-    has_eos: bool
-    eos_at_expected_position: bool
-    truncated_by_max_len: bool
-    unk_count: int
-    has_unk: bool
+    generated_ids: list[int]               # 原始 greedy 输出，不含 BOS。
+    eos_index: int | None                  # 第一个 EOS 的位置。
+    has_eos: bool                          # 是否生成 EOS。
+    eos_at_expected_position: bool         # EOS 是否位于目标长度处。
+    truncated_by_max_len: bool             # 是否因 max_len 截断。
+    unk_count: int                         # 生成的 UNK token 数。
+    has_unk: bool                          # 是否生成过 UNK。
 
 
 @dataclass(frozen=True, slots=True)
 class GenerationDiagnostics:
-    eos_rate: float
-    missing_eos_rate: float
-    eos_at_expected_position_rate: float
-    avg_generated_length: float
-    max_len_truncation_rate: float
-    unk_token_rate: float
-    samples_with_unk_rate: float
+    eos_rate: float                       # 生成 EOS 的样本比例。
+    missing_eos_rate: float               # 未生成 EOS 的样本比例。
+    eos_at_expected_position_rate: float  # EOS 位于预期位置的比例。
+    avg_generated_length: float           # 平均原始生成长度。
+    max_len_truncation_rate: float        # 被 max_len 截断的比例。
+    unk_token_rate: float                 # UNK 在生成词元中的占比。
+    samples_with_unk_rate: float          # 含 UNK 的样本比例。
 
 
 def evaluate_checkpoint(

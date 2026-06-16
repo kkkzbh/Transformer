@@ -9,7 +9,7 @@ from transformer.modeling.attention import MultiHeadAttention
 
 
 class SinusoidalPositionalEncoding(nn.Module):
-    encoding: Tensor
+    encoding: Tensor  # 预计算正弦位置编码。
 
     def __init__(self, d_model: int, max_positions: int) -> None:
         super().__init__()
@@ -32,7 +32,7 @@ class SinusoidalPositionalEncoding(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self, d_model: int, d_ff: int, dropout: float) -> None:
         super().__init__()
-        self.net = nn.Sequential(
+        self.net = nn.Sequential(  # 逐位置前馈网络。
             nn.Linear(d_model, d_ff),
             nn.GELU(),
             nn.Dropout(dropout),
@@ -46,11 +46,11 @@ class FeedForward(nn.Module):
 class EncoderLayer(nn.Module):
     def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super().__init__()
-        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)
-        self.ff = FeedForward(d_model, d_ff, dropout)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
+        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)  # 源序列自注意力。
+        self.ff = FeedForward(d_model, d_ff, dropout)                     # 前馈子层。
+        self.norm1 = nn.LayerNorm(d_model)                                # 自注意力前归一化。
+        self.norm2 = nn.LayerNorm(d_model)                                # 前馈层前归一化。
+        self.dropout = nn.Dropout(dropout)                                # 残差 dropout。
 
     def forward(self, x: Tensor, *, src_padding_mask: Tensor | None = None) -> Tensor:
         x = x + self.dropout(
@@ -68,13 +68,13 @@ class EncoderLayer(nn.Module):
 class DecoderLayer(nn.Module):
     def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super().__init__()
-        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)
-        self.cross_attn = MultiHeadAttention(d_model, num_heads, dropout)
-        self.ff = FeedForward(d_model, d_ff, dropout)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.norm3 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(dropout)
+        self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)   # 目标序列自注意力。
+        self.cross_attn = MultiHeadAttention(d_model, num_heads, dropout)  # 编码器交叉注意力。
+        self.ff = FeedForward(d_model, d_ff, dropout)                      # 前馈子层。
+        self.norm1 = nn.LayerNorm(d_model)                                 # 自注意力前归一化。
+        self.norm2 = nn.LayerNorm(d_model)                                 # 交叉注意力前归一化。
+        self.norm3 = nn.LayerNorm(d_model)                                 # 前馈层前归一化。
+        self.dropout = nn.Dropout(dropout)                                 # 残差 dropout。
 
     def forward(
         self,

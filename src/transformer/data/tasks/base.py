@@ -12,10 +12,10 @@ from transformer.data.vocab import Vocab
 
 class Seq2SeqTask(Protocol):
     @property
-    def name(self) -> str: ...
+    def name(self) -> str: ...  # 任务注册名。
 
     @property
-    def vocab(self) -> Vocab: ...
+    def vocab(self) -> Vocab: ...  # 任务词表。
 
     def make_train_dataset(self) -> Dataset[Seq2SeqSample]: ...
 

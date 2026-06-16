@@ -14,8 +14,8 @@ SPECIAL_TOKENS = (PAD_TOKEN, BOS_TOKEN, EOS_TOKEN, UNK_TOKEN)
 
 @dataclass(frozen=True, slots=True)
 class Vocab:
-    tokens: tuple[str, ...]
-    token_to_id: dict[str, int] = field(init=False, repr=False)
+    tokens: tuple[str, ...]                                      # 有序 token 表。
+    token_to_id: dict[str, int] = field(init=False, repr=False)  # 词元到 id 的索引。
 
     def __post_init__(self) -> None:
         if len(set(self.tokens)) != len(self.tokens):

@@ -17,14 +17,14 @@ from transformer.data.vocab import BOS_TOKEN, EOS_TOKEN, Vocab
 
 @dataclass(frozen=True, slots=True)
 class ReverseDataset(Dataset[Seq2SeqSample]):
-    size: int
-    start_index: int
-    min_len: int
-    max_len: int
-    seed: int
-    digit_count: int
-    vocab: Vocab
-    source_eos: bool = True
+    size: int                    # 样本数量。
+    start_index: int             # 全局样本偏移。
+    min_len: int                 # 最短输入长度。
+    max_len: int                 # 最长输入长度。
+    seed: int                    # 基础随机种子。
+    digit_count: int             # 数字 token 数量。
+    vocab: Vocab                 # 共享任务词表。
+    source_eos: bool = True      # 输入端是否追加 EOS。
 
     def __post_init__(self) -> None:
         if self.size <= 0:
@@ -56,9 +56,9 @@ class ReverseDataset(Dataset[Seq2SeqSample]):
 
 @dataclass(frozen=True, slots=True)
 class ReverseTask:
-    config: TaskConfig
-    name: str = field(init=False, default="reverse")
-    vocab: Vocab = field(init=False)
+    config: TaskConfig                          # 任务与数据配置。
+    name: str = field(init=False, default="reverse")  # 任务注册名。
+    vocab: Vocab = field(init=False)            # 任务词表。
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "vocab", Vocab.digits(self.config.digit_count))
@@ -161,6 +161,6 @@ class ReverseTask:
 
 @dataclass(frozen=True, slots=True)
 class SplitSizes:
-    train: int
-    val: int
-    test: int
+    train: int  # 训练样本数。
+    val: int    # 验证样本数。
+    test: int   # 测试样本数。

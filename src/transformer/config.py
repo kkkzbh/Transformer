@@ -9,49 +9,49 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class TaskConfig:
-    name: str = "reverse"
-    digit_count: int = 10
-    min_len: int = 3
-    max_len: int = 12
-    dataset_size: int = 50_000
-    train_ratio: float = 0.9
-    val_ratio: float = 0.05
-    test_ratio: float = 0.05
-    seed: int = 42
-    source_eos: bool = True
-    samples_to_export: int = 32
-    data_dir: Path = Path("data/generated")
+    name: str = "reverse"                     # 任务注册名。
+    digit_count: int = 10                     # 数字 token 数量。
+    min_len: int = 3                          # 最短输入长度。
+    max_len: int = 12                         # 最长输入长度。
+    dataset_size: int = 50_000                # 合成样本总数。
+    train_ratio: float = 0.9                  # 训练集比例。
+    val_ratio: float = 0.05                   # 验证集比例。
+    test_ratio: float = 0.05                  # 测试集比例。
+    seed: int = 42                            # 数据生成随机种子。
+    source_eos: bool = True                   # 输入端是否追加 EOS。
+    samples_to_export: int = 32               # 导出样例数量。
+    data_dir: Path = Path("data/generated")   # 生成数据目录。
 
 
 @dataclass(frozen=True, slots=True)
 class ModelConfig:
-    d_model: int = 64
-    num_heads: int = 4
-    num_encoder_layers: int = 2
-    num_decoder_layers: int = 2
-    d_ff: int = 128
-    dropout: float = 0.1
-    max_positions: int = 64
+    d_model: int = 64              # 词元表示维度。
+    num_heads: int = 4             # 注意力头数。
+    num_encoder_layers: int = 2    # 编码器层数。
+    num_decoder_layers: int = 2    # 解码器层数。
+    d_ff: int = 128                # 前馈层隐藏维度。
+    dropout: float = 0.1           # 随机失活概率。
+    max_positions: int = 64        # 最大位置编码长度。
 
 
 @dataclass(frozen=True, slots=True)
 class TrainConfig:
-    batch_size: int = 64
-    max_steps: int = 1_000
-    eval_every: int = 100
-    log_every: int = 20
-    learning_rate: float = 5e-4
-    weight_decay: float = 0.0
-    grad_clip: float = 1.0
-    device: str = "auto"
-    run_dir: Path = Path("runs")
+    batch_size: int = 64             # 每步样本数。
+    max_steps: int = 1_000           # 训练步数上限。
+    eval_every: int = 100            # 验证间隔步数。
+    log_every: int = 20              # 训练日志间隔。
+    learning_rate: float = 5e-4      # AdamW 学习率。
+    weight_decay: float = 0.0        # AdamW 权重衰减。
+    grad_clip: float = 1.0           # 梯度裁剪上限。
+    device: str = "auto"             # 设备选择策略。
+    run_dir: Path = Path("runs")     # 实验输出目录。
 
 
 @dataclass(frozen=True, slots=True)
 class ExperimentConfig:
-    task: TaskConfig = TaskConfig()
-    model: ModelConfig = ModelConfig()
-    train: TrainConfig = TrainConfig()
+    task: TaskConfig = TaskConfig()     # 任务与数据配置。
+    model: ModelConfig = ModelConfig()  # 模型结构配置。
+    train: TrainConfig = TrainConfig()  # 训练过程配置。
 
 
 def load_config(path: str | Path) -> ExperimentConfig:

@@ -17,15 +17,15 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         if d_model % num_heads != 0:
             raise ValueError("d_model must be divisible by num_heads.")
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
+        self.d_model = d_model                 # 模型表示维度。
+        self.num_heads = num_heads             # 并行注意力头数。
+        self.head_dim = d_model // num_heads   # 单头表示维度。
 
-        self.q_proj = nn.Linear(d_model, d_model)
-        self.k_proj = nn.Linear(d_model, d_model)
-        self.v_proj = nn.Linear(d_model, d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(dropout)
+        self.q_proj = nn.Linear(d_model, d_model)    # 查询投影。
+        self.k_proj = nn.Linear(d_model, d_model)    # 键投影。
+        self.v_proj = nn.Linear(d_model, d_model)    # 值投影。
+        self.out_proj = nn.Linear(d_model, d_model)  # 输出投影。
+        self.dropout = nn.Dropout(dropout)           # 注意力权重 dropout。
 
     def forward(
         self,

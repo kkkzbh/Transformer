@@ -11,9 +11,9 @@ from transformer.modeling.transformer import Seq2SeqTransformer
 
 class _FixedNextTokenModel:
     def __init__(self, next_ids: list[int], vocab_size: int) -> None:
-        self.next_ids = next_ids
-        self.vocab_size = vocab_size
-        self.calls = 0
+        self.next_ids = next_ids      # 强制生成的 token 序列。
+        self.vocab_size = vocab_size  # 模拟 logits 词表大小。
+        self.calls = 0                # 前向调用次数。
 
     def eval(self) -> None:
         return None

@@ -10,16 +10,16 @@ from torch.nn.utils.rnn import pad_sequence
 
 @dataclass(frozen=True, slots=True)
 class Seq2SeqSample:
-    src: list[int]
-    tgt_in: list[int]
-    tgt_out: list[int]
+    src: list[int]      # 源序列 token id。
+    tgt_in: list[int]   # 解码器输入 id。
+    tgt_out: list[int]  # 解码器目标 id。
 
 
 @dataclass(frozen=True, slots=True)
 class Seq2SeqBatch:
-    src: Tensor
-    tgt_in: Tensor
-    tgt_out: Tensor
+    src: Tensor      # 已填充源序列。
+    tgt_in: Tensor   # 已填充解码输入。
+    tgt_out: Tensor  # 已填充解码目标。
 
     def to(self, device: torch.device) -> Seq2SeqBatch:
         return Seq2SeqBatch(

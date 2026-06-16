@@ -12,29 +12,35 @@ from transformer.modeling.layers import DecoderLayer, EncoderLayer, SinusoidalPo
 class Seq2SeqTransformer(nn.Module):
     def __init__(self, *, vocab_size: int, pad_id: int, config: ModelConfig) -> None:
         super().__init__()
-        self.config = config
-        self.pad_id = pad_id
+        self.config = config  # 模型超参数。
+        self.pad_id = pad_id  # 填充词元 id。
 
-        self.src_embedding = nn.Embedding(vocab_size, config.d_model, padding_idx=pad_id)
-        self.tgt_embedding = nn.Embedding(vocab_size, config.d_model, padding_idx=pad_id)
-        self.position = SinusoidalPositionalEncoding(config.d_model, config.max_positions)
-        self.dropout = nn.Dropout(config.dropout)
+        self.src_embedding = nn.Embedding(  # 源 token 嵌入。
+            vocab_size, config.d_model, padding_idx=pad_id
+        )
+        self.tgt_embedding = nn.Embedding(  # 目标 token 嵌入。
+            vocab_size, config.d_model, padding_idx=pad_id
+        )
+        self.position = SinusoidalPositionalEncoding(  # 共享位置编码。
+            config.d_model, config.max_positions
+        )
+        self.dropout = nn.Dropout(config.dropout)  # 嵌入层 dropout。
 
-        self.encoder_layers = nn.ModuleList(
+        self.encoder_layers = nn.ModuleList(  # 编码器层栈。
             [
                 EncoderLayer(config.d_model, config.num_heads, config.d_ff, config.dropout)
                 for _ in range(config.num_encoder_layers)
             ]
         )
-        self.decoder_layers = nn.ModuleList(
+        self.decoder_layers = nn.ModuleList(  # 解码器层栈。
             [
                 DecoderLayer(config.d_model, config.num_heads, config.d_ff, config.dropout)
                 for _ in range(config.num_decoder_layers)
             ]
         )
-        self.encoder_norm = nn.LayerNorm(config.d_model)
-        self.decoder_norm = nn.LayerNorm(config.d_model)
-        self.output_projection = nn.Linear(config.d_model, vocab_size)
+        self.encoder_norm = nn.LayerNorm(config.d_model)             # 编码器最终归一化。
+        self.decoder_norm = nn.LayerNorm(config.d_model)             # 解码器最终归一化。
+        self.output_projection = nn.Linear(config.d_model, vocab_size)  # 词元 logits。
 
         self._reset_parameters()
 
