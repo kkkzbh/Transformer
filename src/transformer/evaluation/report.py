@@ -182,7 +182,7 @@ def _evaluate_teacher_forced(
 
     for batch in loader:
         batch = batch.to(device)
-        logits = model(batch.src, batch.tgt_in)
+        logits = model(batch.src, batch.tgt_in).logits
         loss = seq2seq_cross_entropy(logits, batch.tgt_out, pad_id=pad_id)
         predictions = logits.argmax(dim=-1)
         token_mask = batch.tgt_out.ne(pad_id)

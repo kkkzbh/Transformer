@@ -36,7 +36,8 @@ def test_model_forward_shape_and_backward() -> None:
         ),
     )
 
-    logits = model(batch.src, batch.tgt_in)
+    output = model(batch.src, batch.tgt_in)
+    logits = output.logits
     loss = seq2seq_cross_entropy(logits, batch.tgt_out, pad_id=task.vocab.pad_id)
     loss.backward()
 

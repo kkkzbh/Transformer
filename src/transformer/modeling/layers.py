@@ -6,6 +6,7 @@ import torch
 from torch import Tensor, nn
 
 from transformer.modeling.attention import MultiHeadAttention
+from transformer.modeling.cache import DecoderLayerCache
 
 
 class SinusoidalPositionalEncoding(nn.Module):
@@ -22,11 +23,14 @@ class SinusoidalPositionalEncoding(nn.Module):
         encoding[:, 1::2] = torch.cos(positions * div_terms)
         self.register_buffer("encoding", encoding.unsqueeze(0), persistent=False)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, *, start_position: int = 0) -> Tensor:
         seq_len = x.size(1)
-        if seq_len > self.encoding.size(1):
-            raise ValueError(f"sequence length {seq_len} exceeds max_positions.")
-        return x + self.encoding[:, :seq_len, :]
+        end_position = start_position + seq_len
+        if start_position < 0:
+            raise ValueError("start_position must be non-negative.")
+        if end_position > self.encoding.size(1):
+            raise ValueError(f"sequence length {end_position} exceeds max_positions.")
+        return x + self.encoding[:, start_position:end_position, :]
 
 
 class FeedForward(nn.Module):
@@ -89,10 +93,14 @@ class DecoderLayer(nn.Module):
         x: Tensor,
         memory: Tensor,
         *,
-        tgt_causal_mask: Tensor,
+        tgt_causal_mask: Tensor | None = None,
         tgt_padding_mask: Tensor | None = None,
         src_padding_mask: Tensor | None = None,
+        layer_cache: DecoderLayerCache | None = None,
     ) -> Tensor:
+        if layer_cache is None and tgt_causal_mask is None:
+            raise ValueError("tgt_causal_mask is required when layer_cache is not provided.")
+
         norm_x = self.norm1(x)
         x = x + self.dropout1(
             self.self_attn(
@@ -101,6 +109,8 @@ class DecoderLayer(nn.Module):
                 norm_x,
                 attn_mask=tgt_causal_mask,
                 key_padding_mask=tgt_padding_mask,
+                kv_cache=None if layer_cache is None else layer_cache.self_attn,
+                append_to_cache=layer_cache is not None,
             )
         )
         x = x + self.dropout2(
@@ -109,6 +119,7 @@ class DecoderLayer(nn.Module):
                 memory,
                 memory,
                 key_padding_mask=src_padding_mask,
+                kv_cache=None if layer_cache is None else layer_cache.cross_attn,
             )
         )
         x = x + self.dropout3(self.ff(self.norm3(x)))

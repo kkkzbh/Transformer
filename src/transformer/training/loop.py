@@ -84,7 +84,7 @@ def train(
             model.train()
             batch = batch.to(device)
             optimizer.zero_grad(set_to_none=True)
-            logits = model(batch.src, batch.tgt_in)
+            logits = model(batch.src, batch.tgt_in).logits
             loss = seq2seq_cross_entropy(logits, batch.tgt_out, pad_id=task.vocab.pad_id)
             loss.backward()
             if config.train.grad_clip > 0:
@@ -148,7 +148,7 @@ def evaluate(
     batches = 0
     for batch in loader:
         batch = batch.to(device)
-        logits = model(batch.src, batch.tgt_in)
+        logits = model(batch.src, batch.tgt_in).logits
         loss = seq2seq_cross_entropy(logits, batch.tgt_out, pad_id=pad_id)
         total_loss += loss.item()
         batches += 1
