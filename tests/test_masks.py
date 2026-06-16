@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import torch
 
-from transformer.modeling.attention import make_causal_mask
+from transformer.modeling.mask import make_causal_mask
 
 
 def test_causal_mask_hides_future_positions() -> None:

@@ -2,14 +2,8 @@ from __future__ import annotations
 
 import math
 
-import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
-
-
-def make_causal_mask(length: int, *, device: torch.device | None = None) -> Tensor:
-    """Return a bool mask where True means "this target position is hidden"."""
-    return torch.ones((length, length), dtype=torch.bool, device=device).triu(diagonal=1)
 
 
 class MultiHeadAttention(nn.Module):

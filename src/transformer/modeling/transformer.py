@@ -5,8 +5,8 @@ import math
 from torch import Tensor, nn
 
 from transformer.config import ModelConfig
-from transformer.modeling.attention import make_causal_mask
 from transformer.modeling.layers import DecoderLayer, EncoderLayer, SinusoidalPositionalEncoding
+from transformer.modeling.mask import make_causal_mask
 
 
 class Seq2SeqTransformer(nn.Module):
