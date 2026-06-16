@@ -1,0 +1,50 @@
+version = 1
+name = "reverse_transformer"
+
+[setup]
+script = ""
+
+[[actions]]
+name = "Prepare reverse data"
+icon = "tool"
+command = "uv run transformer prepare-data --config configs/reverse.toml"
+
+[[actions]]
+name = "Train reverse (3000 steps)"
+icon = "run"
+command = "uv run transformer train --config configs/reverse.toml --max-steps 3000"
+
+[[actions]]
+name = "Infer reverse"
+icon = "debug"
+command = """bash -lc 'set -euo pipefail
+if [ ! -d runs/reverse ]; then
+  echo "No reverse runs found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+ckpt=$(find runs/reverse -path "runs/reverse/0-*/checkpoints/best.pt" -type f | sort | head -n 1)
+if [ -z "${ckpt:-}" ]; then
+  echo "No best.pt checkpoint found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+printf "Input digits (space-separated, default: 3 7 1 9): "
+IFS= read -r sample || sample=""
+sample=${sample:-"3 7 1 9"}
+uv run transformer infer --checkpoint "$ckpt" --input "$sample"
+'"""
+
+[[actions]]
+name = "Evaluate reverse latest checkpoint"
+icon = "test"
+command = """bash -lc 'set -euo pipefail
+if [ ! -d runs/reverse ]; then
+  echo "No reverse runs found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+ckpt=$(find runs/reverse -path "runs/reverse/0-*/checkpoints/best.pt" -type f | sort | head -n 1)
+if [ -z "${ckpt:-}" ]; then
+  echo "No best.pt checkpoint found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+uv run transformer evaluate --checkpoint "$ckpt"
+'"""

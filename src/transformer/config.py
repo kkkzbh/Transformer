@@ -13,8 +13,10 @@ class TaskConfig:
     digit_count: int = 10
     min_len: int = 3
     max_len: int = 12
-    train_size: int = 12_000
-    val_size: int = 512
+    dataset_size: int = 50_000
+    train_ratio: float = 0.9
+    val_ratio: float = 0.05
+    test_ratio: float = 0.05
     seed: int = 42
     source_eos: bool = True
     samples_to_export: int = 32
@@ -83,8 +85,10 @@ def _task_config(raw: Mapping[str, Any]) -> TaskConfig:
         digit_count=int(raw.get("digit_count", defaults["digit_count"])),
         min_len=int(raw.get("min_len", defaults["min_len"])),
         max_len=int(raw.get("max_len", defaults["max_len"])),
-        train_size=int(raw.get("train_size", defaults["train_size"])),
-        val_size=int(raw.get("val_size", defaults["val_size"])),
+        dataset_size=int(raw.get("dataset_size", defaults["dataset_size"])),
+        train_ratio=float(raw.get("train_ratio", defaults["train_ratio"])),
+        val_ratio=float(raw.get("val_ratio", defaults["val_ratio"])),
+        test_ratio=float(raw.get("test_ratio", defaults["test_ratio"])),
         seed=int(raw.get("seed", defaults["seed"])),
         source_eos=bool(raw.get("source_eos", defaults["source_eos"])),
         samples_to_export=int(raw.get("samples_to_export", defaults["samples_to_export"])),

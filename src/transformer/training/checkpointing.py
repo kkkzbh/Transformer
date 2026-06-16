@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import torch
 from torch import nn
@@ -9,6 +8,7 @@ from torch.optim import Optimizer
 
 from transformer.config import ExperimentConfig, ModelConfig, config_from_dict, config_to_dict
 from transformer.data.registry import create_task
+from transformer.data.tasks.base import Seq2SeqTask
 from transformer.modeling.transformer import Seq2SeqTransformer
 
 
@@ -39,7 +39,7 @@ def load_model_for_inference(
     checkpoint_path: str | Path,
     *,
     device: torch.device,
-) -> tuple[Seq2SeqTransformer, Any, ExperimentConfig]:
+) -> tuple[Seq2SeqTransformer, Seq2SeqTask, ExperimentConfig]:
     checkpoint = torch.load(checkpoint_path, map_location=device)
     config = config_from_dict(checkpoint["config"])
     task = create_task(config.task)

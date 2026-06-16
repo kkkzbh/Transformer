@@ -4,7 +4,6 @@ import json
 import shutil
 from collections.abc import Iterable
 from dataclasses import replace
-from datetime import datetime
 from pathlib import Path
 
 import torch
@@ -18,6 +17,7 @@ from transformer.modeling.transformer import Seq2SeqTransformer
 from transformer.training.checkpointing import save_checkpoint
 from transformer.training.losses import seq2seq_cross_entropy
 from transformer.utils.device import resolve_device
+from transformer.utils.run_names import descending_timestamp_name
 from transformer.utils.seed import set_seed
 
 
@@ -54,6 +54,12 @@ def train(
         shuffle=False,
         collate_fn=task.make_collate_fn(),
     )
+    test_loader = DataLoader(
+        task.make_test_dataset(),
+        batch_size=config.train.batch_size,
+        shuffle=False,
+        collate_fn=task.make_collate_fn(),
+    )
 
     model = Seq2SeqTransformer(
         vocab_size=len(task.vocab),
@@ -68,6 +74,7 @@ def train(
 
     metrics_path = run_dir / "metrics.jsonl"
     best_val_loss = float("inf")
+    best_model_state: dict[str, torch.Tensor] | None = None
     step = 0
     progress = tqdm(total=config.train.max_steps, desc="train", dynamic_ncols=True)
 
@@ -103,6 +110,10 @@ def train(
                 )
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
+                    best_model_state = {
+                        name: tensor.detach().cpu().clone()
+                        for name, tensor in model.state_dict().items()
+                    }
                     save_checkpoint(
                         run_dir / "checkpoints" / "best.pt",
                         model=model,
@@ -116,6 +127,11 @@ def train(
                 break
 
     progress.close()
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+        model.to(device)
+    test_loss = evaluate(model, test_loader, device=device, pad_id=task.vocab.pad_id)
+    _append_metric(metrics_path, {"step": step, "test_loss": test_loss})
     return run_dir
 
 
@@ -142,8 +158,7 @@ def evaluate(
 
 
 def _make_run_dir(config: ExperimentConfig) -> Path:
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_dir = config.train.run_dir / config.task.name / timestamp
+    run_dir = config.train.run_dir / config.task.name / descending_timestamp_name()
     (run_dir / "checkpoints").mkdir(parents=True, exist_ok=False)
     return run_dir
 

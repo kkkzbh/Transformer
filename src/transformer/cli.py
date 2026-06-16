@@ -8,6 +8,7 @@ import torch
 
 from transformer.config import load_config
 from transformer.data.registry import create_task
+from transformer.evaluation.report import evaluate_checkpoint, format_evaluation_report
 from transformer.inference.decoding import greedy_decode
 from transformer.training.checkpointing import load_model_for_inference
 from transformer.training.loop import train
@@ -41,6 +42,17 @@ def main(argv: Sequence[str] | None = None) -> None:
                 max_len=args.max_len,
             )
             print(task.decode_target(output_ids))
+        case "evaluate":
+            report_dir = evaluate_checkpoint(
+                args.checkpoint,
+                split=args.split,
+                output_dir=args.output_dir,
+                batch_size=args.batch_size,
+                max_samples=args.max_samples,
+                max_len=args.max_len,
+                device_name=args.device,
+            )
+            print(format_evaluation_report(report_dir))
         case _:
             parser.error("missing command")
 
@@ -61,6 +73,15 @@ def _build_parser() -> argparse.ArgumentParser:
     infer.add_argument("--input", required=True)
     infer.add_argument("--device", default="auto")
     infer.add_argument("--max-len", type=int, default=32)
+
+    evaluate = subparsers.add_parser("evaluate")
+    evaluate.add_argument("--checkpoint", type=Path, required=True)
+    evaluate.add_argument("--split", choices=["train", "val", "test"], default="test")
+    evaluate.add_argument("--output-dir", type=Path, default=None)
+    evaluate.add_argument("--batch-size", type=int, default=None)
+    evaluate.add_argument("--max-samples", type=int, default=512)
+    evaluate.add_argument("--max-len", type=int, default=None)
+    evaluate.add_argument("--device", default="auto")
 
     return parser
 

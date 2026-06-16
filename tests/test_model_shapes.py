@@ -9,7 +9,16 @@ from transformer.training.losses import seq2seq_cross_entropy
 
 
 def test_model_forward_shape_and_backward() -> None:
-    task = ReverseTask(TaskConfig(train_size=8, val_size=8, min_len=3, max_len=5))
+    task = ReverseTask(
+        TaskConfig(
+            dataset_size=20,
+            train_ratio=0.8,
+            val_ratio=0.1,
+            test_ratio=0.1,
+            min_len=3,
+            max_len=5,
+        )
+    )
     dataset = task.make_train_dataset()
     collate = task.make_collate_fn()
     batch = collate([dataset[0], dataset[1]])
