@@ -38,7 +38,7 @@ def train(
     run_dir = _make_run_dir(config)
     if config_path is not None:
         shutil.copy2(config_path, run_dir / "config.toml")
-    with (run_dir / "config.json").open("w", encoding="utf-8") as handle:
+    with (run_dir / "effective_config.json").open("w", encoding="utf-8") as handle:
         json.dump(config_to_dict(config), handle, ensure_ascii=True, indent=2)
         handle.write("\n")
 
