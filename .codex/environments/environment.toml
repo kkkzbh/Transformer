@@ -48,3 +48,22 @@ if [ -z "${ckpt:-}" ]; then
 fi
 uv run transformer evaluate --checkpoint "$ckpt"
 '"""
+
+[[actions]]
+name = "Benchmark reverse KV cache"
+icon = "debug"
+command = """bash -lc 'set -euo pipefail
+if [ ! -d runs/reverse ]; then
+  echo "No reverse runs found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+ckpt=$(find runs/reverse -path "runs/reverse/0-*/checkpoints/best.pt" -type f | sort | head -n 1)
+if [ -z "${ckpt:-}" ]; then
+  echo "No best.pt checkpoint found. Run Train reverse (3000 steps) first."
+  exit 1
+fi
+printf "Benchmark input digits (space-separated, default: 2 3 4 5): "
+IFS= read -r sample || sample=""
+sample=${sample:-"2 3 4 5"}
+uv run transformer benchmark-infer --checkpoint "$ckpt" --input "$sample" --max-len 32 --warmup 5 --repeat 50
+'"""

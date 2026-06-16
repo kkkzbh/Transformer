@@ -6,6 +6,11 @@ from pathlib import Path
 
 import torch
 
+from transformer.benchmarking.inference import (
+    benchmark_inference,
+    format_benchmark_report,
+    write_benchmark_json,
+)
 from transformer.config import load_config
 from transformer.data.registry import create_task
 from transformer.evaluation.report import evaluate_checkpoint, format_evaluation_report
@@ -53,6 +58,18 @@ def main(argv: Sequence[str] | None = None) -> None:
                 device_name=args.device,
             )
             print(format_evaluation_report(report_dir))
+        case "benchmark-infer":
+            result = benchmark_inference(
+                args.checkpoint,
+                input_text=args.input,
+                max_len=args.max_len,
+                warmup=args.warmup,
+                repeat=args.repeat,
+                device_name=args.device,
+            )
+            if args.json_output is not None:
+                write_benchmark_json(result, args.json_output)
+            print(format_benchmark_report(result))
         case _:
             parser.error("missing command")
 
@@ -82,6 +99,15 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--max-samples", type=int, default=512)
     evaluate.add_argument("--max-len", type=int, default=None)
     evaluate.add_argument("--device", default="auto")
+
+    benchmark = subparsers.add_parser("benchmark-infer")
+    benchmark.add_argument("--checkpoint", type=Path, required=True)
+    benchmark.add_argument("--input", required=True)
+    benchmark.add_argument("--device", default="auto")
+    benchmark.add_argument("--max-len", type=int, default=32)
+    benchmark.add_argument("--warmup", type=int, default=5)
+    benchmark.add_argument("--repeat", type=int, default=50)
+    benchmark.add_argument("--json-output", type=Path, default=None)
 
     return parser
 
