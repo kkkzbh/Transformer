@@ -43,3 +43,29 @@ def test_model_forward_shape_and_backward() -> None:
     assert logits.shape == (*batch.tgt_in.shape, len(task.vocab))
     assert torch.isfinite(loss)
     assert any(param.grad is not None for param in model.parameters())
+
+
+def test_padding_embedding_rows_stay_zero_after_parameter_reset() -> None:
+    pad_id = 0
+    model = Seq2SeqTransformer(
+        vocab_size=12,
+        pad_id=pad_id,
+        config=ModelConfig(
+            d_model=16,
+            num_heads=4,
+            num_encoder_layers=1,
+            num_decoder_layers=1,
+            d_ff=32,
+            dropout=0.0,
+            max_positions=16,
+        ),
+    )
+
+    assert torch.equal(
+        model.src_embedding.weight[pad_id],
+        torch.zeros_like(model.src_embedding.weight[pad_id]),
+    )
+    assert torch.equal(
+        model.tgt_embedding.weight[pad_id],
+        torch.zeros_like(model.tgt_embedding.weight[pad_id]),
+    )

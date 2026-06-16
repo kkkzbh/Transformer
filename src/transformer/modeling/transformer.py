@@ -86,3 +86,8 @@ class Seq2SeqTransformer(nn.Module):
         for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
+        self._reset_padding_embeddings()
+
+    def _reset_padding_embeddings(self) -> None:
+        nn.init.zeros_(self.src_embedding.weight[self.pad_id])
+        nn.init.zeros_(self.tgt_embedding.weight[self.pad_id])
