@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments and local tooling caches
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Generated ML artifacts
+data/generated/
+runs/
+*.ckpt
+*.pt
+*.pth
+
+# Local documents and OS/editor files
+*.pdf
+.DS_Store
