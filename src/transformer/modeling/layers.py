@@ -44,28 +44,34 @@ class FeedForward(nn.Module):
 
 
 class EncoderLayer(nn.Module):
+    """Pre-LN 编码器层：先归一化，再进入子层并做残差连接。"""
+
     def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)  # 源序列自注意力。
         self.ff = FeedForward(d_model, d_ff, dropout)                     # 前馈子层。
         self.norm1 = nn.LayerNorm(d_model)                                # 自注意力前归一化。
         self.norm2 = nn.LayerNorm(d_model)                                # 前馈层前归一化。
-        self.dropout = nn.Dropout(dropout)                                # 残差 dropout。
+        self.dropout1 = nn.Dropout(dropout)                               # 自注意力残差 dropout。
+        self.dropout2 = nn.Dropout(dropout)                               # 前馈残差 dropout。
 
     def forward(self, x: Tensor, *, src_padding_mask: Tensor | None = None) -> Tensor:
-        x = x + self.dropout(
+        norm_x = self.norm1(x)
+        x = x + self.dropout1(
             self.self_attn(
-                self.norm1(x),
-                self.norm1(x),
-                self.norm1(x),
+                norm_x,
+                norm_x,
+                norm_x,
                 key_padding_mask=src_padding_mask,
             )
         )
-        x = x + self.dropout(self.ff(self.norm2(x)))
+        x = x + self.dropout2(self.ff(self.norm2(x)))
         return x
 
 
 class DecoderLayer(nn.Module):
+    """Pre-LN 解码器层：自注意力、交叉注意力、前馈层各自做残差连接。"""
+
     def __init__(self, d_model: int, num_heads: int, d_ff: int, dropout: float) -> None:
         super().__init__()
         self.self_attn = MultiHeadAttention(d_model, num_heads, dropout)   # 目标序列自注意力。
@@ -74,7 +80,9 @@ class DecoderLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)                                 # 自注意力前归一化。
         self.norm2 = nn.LayerNorm(d_model)                                 # 交叉注意力前归一化。
         self.norm3 = nn.LayerNorm(d_model)                                 # 前馈层前归一化。
-        self.dropout = nn.Dropout(dropout)                                 # 残差 dropout。
+        self.dropout1 = nn.Dropout(dropout)                                # 自注意力残差 dropout。
+        self.dropout2 = nn.Dropout(dropout)                                # 交叉残差 dropout。
+        self.dropout3 = nn.Dropout(dropout)                                # 前馈残差 dropout。
 
     def forward(
         self,
@@ -86,7 +94,7 @@ class DecoderLayer(nn.Module):
         src_padding_mask: Tensor | None = None,
     ) -> Tensor:
         norm_x = self.norm1(x)
-        x = x + self.dropout(
+        x = x + self.dropout1(
             self.self_attn(
                 norm_x,
                 norm_x,
@@ -95,7 +103,7 @@ class DecoderLayer(nn.Module):
                 key_padding_mask=tgt_padding_mask,
             )
         )
-        x = x + self.dropout(
+        x = x + self.dropout2(
             self.cross_attn(
                 self.norm2(x),
                 memory,
@@ -103,5 +111,5 @@ class DecoderLayer(nn.Module):
                 key_padding_mask=src_padding_mask,
             )
         )
-        x = x + self.dropout(self.ff(self.norm3(x)))
+        x = x + self.dropout3(self.ff(self.norm3(x)))
         return x
