@@ -31,7 +31,6 @@ class MultiHeadAttention(nn.Module):
         key_padding_mask: Tensor | None = None,
     ) -> Tensor:
         batch_size, query_len, _ = query.shape
-        key_len = key.size(1)
 
         q = self._split_heads(self.q_proj(query))
         k = self._split_heads(self.k_proj(key))
@@ -50,7 +49,7 @@ class MultiHeadAttention(nn.Module):
         context = weights @ v
         context = context.transpose(1, 2).contiguous().view(batch_size, query_len, self.d_model)
 
-        if context.size(1) != query_len or key_len != key.size(1):
+        if context.size(1) != query_len:
             raise RuntimeError("Unexpected attention shape change.")
         return self.out_proj(context)
 
