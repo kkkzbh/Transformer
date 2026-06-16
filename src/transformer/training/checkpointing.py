@@ -6,7 +6,7 @@ import torch
 from torch import nn
 from torch.optim import Optimizer
 
-from transformer.config import ExperimentConfig, ModelConfig, config_from_dict, config_to_dict
+from transformer.config import ExperimentConfig, config_from_dict, config_to_dict
 from transformer.data.registry import create_task
 from transformer.data.tasks.base import Seq2SeqTask
 from transformer.modeling.transformer import Seq2SeqTransformer
@@ -46,7 +46,7 @@ def load_model_for_inference(
     model = Seq2SeqTransformer(
         vocab_size=len(task.vocab),
         pad_id=task.vocab.pad_id,
-        config=ModelConfig(**config_to_dict(config)["model"]),
+        config=config.model,
     )
     model.load_state_dict(checkpoint["model_state"])
     model.to(device)
