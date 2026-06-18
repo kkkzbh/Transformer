@@ -1,5 +1,7 @@
 # Transformer
 
+English | [简体中文](README.zh-CN.md)
+
 A small, extensible PyTorch project for implementing Transformer sequence-to-sequence
 models from first principles.
 
